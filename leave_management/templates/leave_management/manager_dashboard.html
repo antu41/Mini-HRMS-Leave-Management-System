@@ -1,0 +1,259 @@
+{% extends 'leave_management/base.html' %} {% block title %}Manager Dashboard -
+HRMS{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="text-white mb-4">
+      <i class="bi bi-person-badge"></i> Manager Dashboard
+    </h1>
+  </div>
+</div>
+
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-list-check"></i> Pending Leave Requests
+          <span class="badge bg-warning text-dark ms-2"
+            >{{ pending_requests.count }}</span
+          >
+        </h5>
+      </div>
+      <div class="card-body">
+        {% if pending_requests %}
+        <div class="table-responsive">
+          <table class="table table-hover" id="leaveRequestsTable">
+            <thead>
+              <tr>
+                <th>Employee</th>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Days</th>
+                <th>Current Balance</th>
+                <th>Reason</th>
+                <th>Applied On</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for request in pending_requests %}
+              <tr id="request-row-{{ request.id }}">
+                <td>
+                  <strong
+                    >{{request.employee.get_full_name|default:request.employee.username}}</strong
+                  >
+                </td>
+                <td>{{ request.start_date|date:"M d, Y" }}</td>
+                <td>{{ request.end_date|date:"M d, Y" }}</td>
+                <td>
+                  <span class="badge bg-info"
+                    >{{ request.days_requested }}
+                    day{{request.days_requested|pluralize }}</span
+                  >
+                </td>
+                <td>
+                  <span class="badge bg-secondary"
+                    >{{ request.employee.profile.leave_balance }} days</span
+                  >
+                </td>
+                <td>
+                  <span data-bs-toggle="tooltip" title="{{ request.reason }}">
+                    {{ request.reason|truncatewords:8 }}
+                  </span>
+                </td>
+                <td>{{ request.created_at|date:"M d, Y H:i" }}</td>
+                <td>
+                  <div class="btn-group" role="group">
+                    <button
+                      class="btn btn-sm btn-success approve-btn"
+                      data-request-id="{{ request.id }}"
+                      onclick="processLeaveRequest('{{ request.id }}', 'approve')"
+                    >
+                      <i class="bi bi-check-lg"></i> Approve
+                    </button>
+                    <button
+                      class="btn btn-sm btn-danger reject-btn"
+                      data-request-id="{{ request.id }}"
+                      onclick="processLeaveRequest('{{ request.id }}', 'reject')"
+                    >
+                      <i class="bi bi-x-lg"></i> Reject
+                    </button>
+                  </div>
+                </td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+          <i
+            class="bi bi-check-circle"
+            style="font-size: 4rem; color: #198754"
+          ></i>
+          <p class="text-muted mt-3">No pending leave requests</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Toast Container -->
+<div class="toast-container position-fixed bottom-0 end-0 p-3">
+  <div
+    id="actionToast"
+    class="toast"
+    role="alert"
+    aria-live="assertive"
+    aria-atomic="true"
+  >
+    <div class="toast-header">
+      <i class="bi bi-bell me-2"></i>
+      <strong class="me-auto">Notification</strong>
+      <button type="button" class="btn-close" data-bs-dismiss="toast"></button>
+    </div>
+    <div class="toast-body" id="toastMessage"></div>
+  </div>
+</div>
+{% endblock %} {% block extra_js %}
+<!-- jQuery CDN -->
+<script src="https://code.jquery.com/jquery-3.7.1.min.js"></script>
+
+<script>
+  // Get CSRF token
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === name + "=") {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  const csrftoken = getCookie("csrftoken");
+
+  // Setup jQuery AJAX to include CSRF token in all requests
+  $.ajaxSetup({
+    beforeSend: function (xhr, settings) {
+      if (!(/^http:.*/.test(settings.url) || /^https:.*/.test(settings.url))) {
+        // Only send the token to relative URLs i.e. locally.
+        xhr.setRequestHeader("X-CSRFToken", csrftoken);
+      }
+    },
+  });
+
+  // Show toast notification
+  function showToast(message, isSuccess) {
+    const toastElement = $("#actionToast");
+    const toastMessage = $("#toastMessage");
+    const toastHeader = toastElement.find(".toast-header");
+
+    toastMessage.text(message);
+
+    // Change toast color based on success/error
+    if (isSuccess) {
+      toastHeader.removeClass("bg-danger text-white");
+      toastHeader.addClass("bg-success text-white");
+    } else {
+      toastHeader.removeClass("bg-success text-white");
+      toastHeader.addClass("bg-danger text-white");
+    }
+
+    const toast = new bootstrap.Toast(toastElement[0]);
+    toast.show();
+  }
+
+  // Process leave request using jQuery AJAX
+  function processLeaveRequest(requestId, action) {
+    const row = $("#request-row-" + requestId);
+    const buttons = row.find("button");
+
+    // Disable buttons during processing
+    buttons.prop("disabled", true);
+    buttons.html('<span class="spinner-border spinner-border-sm"></span>');
+
+    // Make AJAX request using jQuery
+    $.ajax({
+      url: "/api/leave-request/" + requestId + "/process/",
+      type: "POST",
+      contentType: "application/json",
+      data: JSON.stringify({
+        action: action,
+      }),
+      dataType: "json",
+      success: function (data) {
+        // Handle success response
+        if (data.success) {
+          // Show success message
+          showToast(data.message, true);
+
+          // Remove row with fade effect
+          row.fadeOut(500, function () {
+            $(this).remove();
+
+            // Check if table is empty
+            const tbody = $("#leaveRequestsTable tbody");
+            if (tbody.children().length === 0) {
+              location.reload(); // Reload to show "no pending requests" message
+            }
+          });
+        } else {
+          // Show error message
+          showToast(data.error || "An error occurred", false);
+
+          // Re-enable buttons
+          resetButtons(buttons);
+        }
+      },
+      error: function (xhr, status, error) {
+        // Handle error response
+        console.error("Error:", error);
+
+        let errorMessage = "An error occurred. Please try again.";
+
+        if (xhr.responseJSON && xhr.responseJSON.error) {
+          errorMessage = xhr.responseJSON.error;
+        } else if (xhr.status === 403) {
+          errorMessage = "Unauthorized access";
+        } else if (xhr.status === 404) {
+          errorMessage = "Leave request not found";
+        } else if (xhr.status === 500) {
+          errorMessage = "Server error occurred";
+        }
+
+        showToast(errorMessage, false);
+
+        // Re-enable buttons
+        resetButtons(buttons);
+      },
+    });
+  }
+
+  // Reset buttons to original state
+  function resetButtons(buttons) {
+    buttons.each(function (index) {
+      $(this).prop("disabled", false);
+      if (index === 0) {
+        $(this).html('<i class="bi bi-check-lg"></i> Approve');
+      } else {
+        $(this).html('<i class="bi bi-x-lg"></i> Reject');
+      }
+    });
+  }
+
+  // Initialize tooltips when document is ready
+  $(document).ready(function () {
+    // Initialize Bootstrap tooltips
+    $('[data-bs-toggle="tooltip"]').tooltip();
+
+    console.log("jQuery AJAX initialized for HRMS Leave Management System");
+  });
+</script>
+{% endblock %}

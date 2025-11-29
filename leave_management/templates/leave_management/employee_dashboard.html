@@ -1,0 +1,146 @@
+{% extends 'leave_management/base.html' %} {% block title %}Employee Dashboard -
+HRMS{% endblock %} {% block content %}
+<div class="row">
+  <div class="col-12">
+    <h1 class="text-white mb-4">
+      <i class="bi bi-speedometer2"></i> Employee Dashboard
+    </h1>
+  </div>
+</div>
+
+<div class="row">
+  <!-- Leave Balance Card -->
+  <div class="col-md-4 mb-4">
+    <div class="stats-card text-center">
+      <i class="bi bi-calendar-heart" style="font-size: 3rem"></i>
+      <h2 class="mt-3">{{ leave_balance }}</h2>
+      <p>Days Available</p>
+    </div>
+  </div>
+
+  <!-- Apply for Leave Form -->
+  <div class="col-md-8 mb-4">
+    <div class="card">
+      <div class="card-header bg-primary text-white">
+        <h5 class="mb-0">
+          <i class="bi bi-file-earmark-plus"></i> Apply for Leave
+        </h5>
+      </div>
+      <div class="card-body">
+        <form method="post">
+          {% csrf_token %}
+
+          <div class="row">
+            <div class="col-md-6 mb-3">
+              <label
+                for="{{ form.start_date.id_for_label }}"
+                class="form-label"
+              >
+                <i class="bi bi-calendar-event"></i> Start Date
+              </label>
+              {{ form.start_date }} {% if form.start_date.errors %}
+              <div class="text-danger small mt-1">
+                {{ form.start_date.errors }}
+              </div>
+              {% endif %}
+            </div>
+
+            <div class="col-md-6 mb-3">
+              <label for="{{ form.end_date.id_for_label }}" class="form-label">
+                <i class="bi bi-calendar-event"></i> End Date
+              </label>
+              {{ form.end_date }} {% if form.end_date.errors %}
+              <div class="text-danger small mt-1">
+                {{ form.end_date.errors }}
+              </div>
+              {% endif %}
+            </div>
+          </div>
+
+          <div class="mb-3">
+            <label for="{{ form.reason.id_for_label }}" class="form-label">
+              <i class="bi bi-chat-left-text"></i> Reason
+            </label>
+            {{ form.reason }} {% if form.reason.errors %}
+            <div class="text-danger small mt-1">{{ form.reason.errors }}</div>
+            {% endif %}
+          </div>
+
+          {% if form.non_field_errors %}
+          <div class="alert alert-danger">{{ form.non_field_errors }}</div>
+          {% endif %}
+
+          <button type="submit" class="btn btn-primary">
+            <i class="bi bi-send"></i> Submit Request
+          </button>
+        </form>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Leave History -->
+<div class="row">
+  <div class="col-12">
+    <div class="card">
+      <div class="card-header bg-secondary text-white">
+        <h5 class="mb-0"><i class="bi bi-clock-history"></i> Leave History</h5>
+      </div>
+      <div class="card-body">
+        {% if leave_requests %}
+        <div class="table-responsive">
+          <table class="table table-hover">
+            <thead>
+              <tr>
+                <th>Start Date</th>
+                <th>End Date</th>
+                <th>Days</th>
+                <th>Reason</th>
+                <th>Status</th>
+                <th>Applied On</th>
+              </tr>
+            </thead>
+            <tbody>
+              {% for request in leave_requests %}
+              <tr>
+                <td>{{ request.start_date|date:"M d, Y" }}</td>
+                <td>{{ request.end_date|date:"M d, Y" }}</td>
+                <td>
+                  <span class="badge bg-info"
+                    >{{ request.days_requested }} 
+                    day{{request.days_requested|pluralize }}</span
+                  >
+                </td>
+                <td>{{ request.reason|truncatewords:10 }}</td>
+                <td>
+                  {% if request.status == 'pending' %}
+                  <span class="badge bg-warning text-dark">
+                    <i class="bi bi-clock"></i> Pending
+                  </span>
+                  {% elif request.status == 'approved' %}
+                  <span class="badge bg-success">
+                    <i class="bi bi-check-circle"></i> Approved
+                  </span>
+                  {% else %}
+                  <span class="badge bg-danger">
+                    <i class="bi bi-x-circle"></i> Rejected
+                  </span>
+                  {% endif %}
+                </td>
+                <td>{{ request.created_at|date:"M d, Y H:i" }}</td>
+              </tr>
+              {% endfor %}
+            </tbody>
+          </table>
+        </div>
+        {% else %}
+        <div class="text-center py-5">
+          <i class="bi bi-inbox" style="font-size: 4rem; color: #ccc"></i>
+          <p class="text-muted mt-3">No leave requests yet</p>
+        </div>
+        {% endif %}
+      </div>
+    </div>
+  </div>
+</div>
+{% endblock %}
