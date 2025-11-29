@@ -9,11 +9,11 @@ from leave_management.models import UserProfile
 
 # Create employee user
 employee, created = User.objects.get_or_create(
-    username='employee',
+    username='john',
     defaults={
         'first_name': 'John',
         'last_name': 'Doe',
-        'email': 'employee@example.com'
+        'email': 'john@example.com'
     }
 )
 if created:
@@ -26,11 +26,11 @@ else:
 
 # Create manager user
 manager, created = User.objects.get_or_create(
-    username='manager',
+    username='jane',
     defaults={
         'first_name': 'Jane',
         'last_name': 'Smith',
-        'email': 'manager@example.com'
+        'email': 'jane@example.com'
     }
 )
 if created:

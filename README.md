@@ -35,7 +35,7 @@ A Django-based leave management system with employee and manager portals.
 1. Clone the repository:
 
 ```bash
-git clone <repository-url>
+git clone https://github.com/antu41/Mini-HRMS-Leave-Management-System.git
 cd hrms_leave_management
 ```
 

@@ -144,7 +144,7 @@
           <ul class="navbar-nav ms-auto">
             <li class="nav-item">
               <span class="nav-link">
-                <i class="bi bi-person-circle"></i> {{ user.username }}
+                <i class="bi bi-person-circle"></i> {{ user.get_full_name }}
                 <span class="badge bg-primary"
                   >{{ user.profile.role|title }}</span
                 >
